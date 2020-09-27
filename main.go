@@ -60,8 +60,7 @@ func getInput(f *os.File, arg string) (string, error) {
 		return arg, nil
 	}
 
-	size := fi.Size()
-	if size == 0 && fi.Mode() == os.ModeCharDevice {
+	if fi.Size() == 0 && fi.Mode()&os.ModeCharDevice != 0 {
 		if arg == "" {
 			return "", fmt.Errorf("args and STDIN are empty")
 		}
