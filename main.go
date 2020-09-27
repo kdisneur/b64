@@ -1,12 +1,13 @@
 package main
 
 import (
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/kdisneur/b64/internal"
 )
 
 func main() {
@@ -16,50 +17,23 @@ func main() {
 	}
 }
 
-type encoder struct {
-	WithPadding      bool
-	URLEncodingFomat bool
-	ShouldDecode     bool
-}
-
-func (e encoder) GetEncoder() *base64.Encoding {
-	if e.URLEncodingFomat {
-		if e.WithPadding {
-			return base64.URLEncoding
-		}
-		return base64.RawURLEncoding
-	}
-
-	if e.WithPadding {
-		return base64.StdEncoding
-	}
-
-	return base64.RawStdEncoding
-}
-
-func (e encoder) Transform(input string) (string, error) {
-	if e.ShouldDecode {
-		data, err := e.GetEncoder().DecodeString(input)
-		if err != nil {
-			return "", fmt.Errorf("can't decode input: %v", err)
-		}
-
-		return string(data), nil
-	}
-
-	return e.GetEncoder().EncodeToString([]byte(input)), nil
-}
-
 func run() error {
-	var e encoder
+	var encoder internal.Encoder
+	var showVersion bool
 
 	fs := flag.NewFlagSet("b64", flag.ExitOnError)
-	fs.BoolVar(&e.ShouldDecode, "d", false, "decode the base 64 input")
-	fs.BoolVar(&e.URLEncodingFomat, "u", false, "input/output follow base 64 URL encoded format")
-	fs.BoolVar(&e.WithPadding, "p", true, "input/output are base 64 padded string")
+	fs.BoolVar(&encoder.ShouldDecode, "d", false, "decode the base 64 input")
+	fs.BoolVar(&encoder.URLEncodingFomat, "u", false, "input/output follow base 64 URL encoded format")
+	fs.BoolVar(&encoder.WithPadding, "p", true, "input/output are base 64 padded string")
+	fs.BoolVar(&showVersion, "v", false, "displays the current version")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return err
+	}
+
+	if showVersion {
+		fmt.Println(internal.GetVersionInfo().String())
+		return nil
 	}
 
 	input, err := getInput(os.Stdin, strings.TrimSpace(strings.Join(fs.Args(), " ")))
@@ -67,7 +41,7 @@ func run() error {
 		return fmt.Errorf("can't get input data: %v", err)
 	}
 
-	data, err := e.Transform(strings.TrimSpace(input))
+	data, err := encoder.Transform(strings.TrimSpace(input))
 	if err != nil {
 		return err
 	}
